@@ -15,9 +15,11 @@
 #endregion
 
 using System;
+using System.Collections.Generic;
 using System.Data.Common;
 using System.Data.SqlClient;
 
+using FluentMigrator.Runner.BatchParser;
 using FluentMigrator.Runner.Generators.SqlServer;
 using FluentMigrator.Runner.Initialization;
 
@@ -30,7 +32,37 @@ namespace FluentMigrator.Runner.Processors.SqlServer
 {
     public class SqlServer2016Processor : SqlServerProcessor
     {
-        /// <inheritdoc />
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqlServer2016Processor"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        /// <param name="quoter">The quoter.</param>
+        /// <param name="generator">The migration generator.</param>
+        /// <param name="options">The processor options.</param>
+        /// <param name="connectionStringAccessor">The connection string accessor.</param>
+        /// <param name="batchParserFactory">The batch parser factory.</param>
+        public SqlServer2016Processor(
+            [NotNull] ILogger<SqlServer2016Processor> logger,
+            [NotNull] SqlServer2008Quoter quoter,
+            [NotNull] SqlServer2016Generator generator,
+            [NotNull] IOptionsSnapshot<ProcessorOptions> options,
+            [NotNull] IConnectionStringAccessor connectionStringAccessor,
+            [NotNull] SqlServerBatchParserFactory batchParserFactory)
+            : base(new[] { "SqlServer2016", "SqlServer" }, SqlClientFactory.Instance, generator, quoter, logger, options, connectionStringAccessor, batchParserFactory)
+        {
+
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqlServer2016Processor"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        /// <param name="quoter">The quoter.</param>
+        /// <param name="generator">The migration generator.</param>
+        /// <param name="options">The processor options.</param>
+        /// <param name="connectionStringAccessor">The connection string accessor.</param>
+        /// <param name="serviceProvider">The service provider</param>
+        [Obsolete]
         public SqlServer2016Processor(
             [NotNull] ILogger<SqlServer2016Processor> logger,
             [NotNull] SqlServer2008Quoter quoter,
@@ -49,7 +81,49 @@ namespace FluentMigrator.Runner.Processors.SqlServer
         {
         }
 
-        /// <inheritdoc />
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqlServer2016Processor"/> class.
+        /// </summary>
+        /// <param name="databaseTypes">The database type identifiers</param>
+        /// <param name="factory">The DB provider factory.</param>
+        /// <param name="logger">The logger.</param>
+        /// <param name="quoter">The quoter.</param>
+        /// <param name="generator">The migration generator.</param>
+        /// <param name="options">The processor options.</param>
+        /// <param name="connectionStringAccessor">The connection string accessor.</param>
+        /// <param name="batchParserFactory">The batch parser factory.</param>
+        protected SqlServer2016Processor(
+            [NotNull] IEnumerable<string> databaseTypes,
+            [NotNull] DbProviderFactory factory,
+            [NotNull] ILogger logger,
+            [NotNull] SqlServer2008Quoter quoter,
+            [NotNull] SqlServer2016Generator generator,
+            [NotNull] IOptionsSnapshot<ProcessorOptions> options,
+            [NotNull] IConnectionStringAccessor connectionStringAccessor,
+            [NotNull] SqlServerBatchParserFactory batchParserFactory)
+            : base(
+                databaseTypes,
+                factory,
+                generator,
+                quoter,
+                logger,
+                options,
+                connectionStringAccessor,
+                batchParserFactory)
+        {
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqlServer2016Processor"/> class.
+        /// </summary>
+        /// <param name="factory">The DB provider factory.</param>
+        /// <param name="logger">The logger.</param>
+        /// <param name="quoter">The quoter.</param>
+        /// <param name="generator">The migration generator.</param>
+        /// <param name="options">The processor options.</param>
+        /// <param name="connectionStringAccessor">The connection string accessor.</param>
+        /// <param name="serviceProvider">The service provider</param>
+        [Obsolete]
         protected SqlServer2016Processor(
             [NotNull] DbProviderFactory factory,
             [NotNull] ILogger logger,

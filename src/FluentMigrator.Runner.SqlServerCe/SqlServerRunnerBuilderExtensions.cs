@@ -36,7 +36,7 @@ namespace FluentMigrator.Runner
         public static IMigrationRunnerBuilder AddSqlServerCe(this IMigrationRunnerBuilder builder)
         {
             builder.Services.TryAddScoped<SqlServer2000Quoter>();
-            builder.Services.TryAddTransient<SqlServerBatchParser>();
+            builder.Services.TryAddSingleton<SqlServerBatchParserFactory>();
             builder.Services
                 .AddScoped<SqlServerCeDbFactory>()
                 .AddScoped<SqlServerCeProcessor>()

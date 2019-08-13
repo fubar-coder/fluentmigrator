@@ -49,7 +49,6 @@ namespace FluentMigrator.Tests.Unit.Processors.SqlServer2000
             var serviceProvider = new ServiceCollection()
                 .AddLogging()
                 .AddSingleton<ILoggerProvider, TestLoggerProvider>()
-                .AddTransient<SqlServerBatchParser>()
                 .BuildServiceProvider();
 
             var logger = serviceProvider.GetRequiredService<ILogger<SqlServer2000Processor>>();
@@ -62,15 +61,19 @@ namespace FluentMigrator.Tests.Unit.Processors.SqlServer2000
                 logger,
                 new SqlServer2000Generator(),
                 opt,
-                MockedConnectionStringAccessor.Object,
-                serviceProvider);
+                MockedConnectionStringAccessor.Object);
         }
 
         private class Processor : SqlServer2000Processor
         {
             /// <inheritdoc />
-            public Processor(DbProviderFactory factory, [NotNull] ILogger logger, [NotNull] SqlServer2000Generator generator, [NotNull] IOptionsSnapshot<ProcessorOptions> options, [NotNull] IConnectionStringAccessor connectionStringAccessor, [NotNull] IServiceProvider serviceProvider)
-                : base(factory, logger, generator, options, connectionStringAccessor, serviceProvider)
+            public Processor(
+                DbProviderFactory factory,
+                [NotNull] ILogger logger,
+                [NotNull] SqlServer2000Generator generator,
+                [NotNull] IOptionsSnapshot<ProcessorOptions> options,
+                [NotNull] IConnectionStringAccessor connectionStringAccessor)
+                : base(factory, logger, generator, options, connectionStringAccessor, new SqlServerBatchParserFactory(null))
             {
             }
         }

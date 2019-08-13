@@ -20,7 +20,4 @@
       <Version>4.4.3</Version>
     </PackageReference>
   </ItemGroup>
-  <ItemGroup>
-    <Folder Include="BatchParser" />
-  </ItemGroup>
 </Project>

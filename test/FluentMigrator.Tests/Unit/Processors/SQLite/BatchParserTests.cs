@@ -48,7 +48,6 @@ namespace FluentMigrator.Tests.Unit.Processors.SQLite
             var serviceProvider = new ServiceCollection()
                 .AddLogging()
                 .AddSingleton<ILoggerProvider, TestLoggerProvider>()
-                .AddTransient<SQLiteBatchParser>()
                 .BuildServiceProvider();
 
             var logger = serviceProvider.GetRequiredService<ILogger<SQLiteProcessor>>();
@@ -62,7 +61,7 @@ namespace FluentMigrator.Tests.Unit.Processors.SQLite
                 logger,
                 opt,
                 MockedConnectionStringAccessor.Object,
-                serviceProvider);
+                new SQLiteBatchParserFactory(null));
         }
     }
 }

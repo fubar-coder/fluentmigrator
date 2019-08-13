@@ -19,6 +19,7 @@ using FluentMigrator.Runner.Generators.SqlAnywhere;
 using FluentMigrator.Runner.Processors.SqlAnywhere;
 
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 
 namespace FluentMigrator.Runner
 {
@@ -35,13 +36,13 @@ namespace FluentMigrator.Runner
         public static IMigrationRunnerBuilder AddSqlAnywhere16(this IMigrationRunnerBuilder builder)
         {
             builder.Services
-                .AddTransient<SqlAnywhereBatchParser>()
                 .AddScoped<SqlAnywhereDbFactory>()
                 .AddScoped<SqlAnywhere16Processor>()
                 .AddScoped<IMigrationProcessor>(sp => sp.GetRequiredService<SqlAnywhere16Processor>())
                 .AddScoped<SqlAnywhereQuoter>()
                 .AddScoped<SqlAnywhere16Generator>()
-                .AddScoped<IMigrationGenerator>(sp => sp.GetRequiredService<SqlAnywhere16Generator>());
+                .AddScoped<IMigrationGenerator>(sp => sp.GetRequiredService<SqlAnywhere16Generator>())
+                .TryAddSingleton<SqlAnywhereBatchParserFactory>();
             return builder;
         }
 

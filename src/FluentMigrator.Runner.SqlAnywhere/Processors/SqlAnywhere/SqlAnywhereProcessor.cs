@@ -42,10 +42,13 @@ using Microsoft.Extensions.Options;
 
 namespace FluentMigrator.Runner.Processors.SqlAnywhere
 {
+    /// <summary>
+    /// Processor for SQL Anywhere.
+    /// </summary>
     public class SqlAnywhereProcessor : GenericProcessorBase
     {
-        [CanBeNull]
-        private readonly IServiceProvider _serviceProvider;
+        [NotNull]
+        private readonly ISqlBatchParserFactory _batchParserFactory;
 
         //select 1 from sys.syscolumn as c inner join sys.systable as t on t.table_id = c.table_id where t.table_name = '{0}' and c.column_name = '{1}'
         private const string SCHEMA_EXISTS = "SELECT 1 WHERE EXISTS (SELECT * FROM sys.sysuserperm WHERE user_name = '{0}') ";
@@ -65,8 +68,10 @@ namespace FluentMigrator.Runner.Processors.SqlAnywhere
             : base(connection, factory, generator, announcer, options)
         {
             DatabaseType = databaseType;
+            _batchParserFactory = new SqlAnywhereBatchParserFactory(null);
         }
 
+        [Obsolete]
         protected SqlAnywhereProcessor(
             [NotNull] string databaseType,
             [NotNull] Func<DbProviderFactory> factoryAccessor,
@@ -77,7 +82,32 @@ namespace FluentMigrator.Runner.Processors.SqlAnywhere
             [NotNull] IServiceProvider serviceProvider)
             : base(factoryAccessor, generator, logger, options.Value, connectionStringAccessor)
         {
-            _serviceProvider = serviceProvider;
+            _batchParserFactory = serviceProvider.GetService<SqlAnywhereBatchParserFactory>()
+             ?? new SqlAnywhereBatchParserFactory(serviceProvider);
+            DatabaseType = databaseType;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqlAnywhereProcessor"/> class.
+        /// </summary>
+        /// <param name="databaseType">The database type.</param>
+        /// <param name="factoryAccessor">The factory accessor.</param>
+        /// <param name="generator">The generator.</param>
+        /// <param name="logger">The logger.</param>
+        /// <param name="options">The processor options.</param>
+        /// <param name="connectionStringAccessor">The connection string accessor.</param>
+        /// <param name="batchParserFactory">The SQL batch parser factory.</param>
+        protected SqlAnywhereProcessor(
+            [NotNull] string databaseType,
+            [NotNull] Func<DbProviderFactory> factoryAccessor,
+            [NotNull] IMigrationGenerator generator,
+            [NotNull] ILogger logger,
+            [NotNull] IOptionsSnapshot<ProcessorOptions> options,
+            [NotNull] IConnectionStringAccessor connectionStringAccessor,
+            [NotNull] ISqlBatchParserFactory batchParserFactory)
+            : base(factoryAccessor, generator, logger, options.Value, connectionStringAccessor)
+        {
+            _batchParserFactory = batchParserFactory;
             DatabaseType = databaseType;
         }
 
@@ -258,7 +288,7 @@ namespace FluentMigrator.Runner.Processors.SqlAnywhere
         private bool ContainsGo(string sql)
         {
             var containsGo = false;
-            var parser = _serviceProvider?.GetService<SqlAnywhereBatchParser>() ?? new SqlAnywhereBatchParser();
+            var parser = _batchParserFactory.Create();
             parser.SpecialToken += (sender, args) => containsGo = true;
             using (var source = new TextReaderSource(new StringReader(sql), true))
             {
@@ -302,7 +332,7 @@ namespace FluentMigrator.Runner.Processors.SqlAnywhere
 
             try
             {
-                var parser = _serviceProvider?.GetService<SqlAnywhereBatchParser>() ?? new SqlAnywhereBatchParser();
+                var parser = _batchParserFactory.Create();
                 parser.SqlText += (sender, args) => { sqlBatch = args.SqlText.Trim(); };
                 parser.SpecialToken += (sender, args) =>
                 {

@@ -42,15 +42,29 @@ namespace FluentMigrator.Runner.Processors.SQLite
     // ReSharper disable once InconsistentNaming
     public class SQLiteProcessor : GenericProcessorBase
     {
-        [CanBeNull]
-        private readonly IServiceProvider _serviceProvider;
+        [NotNull]
+        private readonly SQLiteBatchParserFactory _batchParserFactory;
 
-        public override string DatabaseType
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SQLiteProcessor"/> class.
+        /// </summary>
+        /// <param name="factory">The SQLite DB factory.</param>
+        /// <param name="generator">The migration generator.</param>
+        /// <param name="logger">The logger.</param>
+        /// <param name="options">The options.</param>
+        /// <param name="connectionStringAccessor">The connection string accessor.</param>
+        /// <param name="batchParserFactory">The batch parser factory.</param>
+        public SQLiteProcessor(
+            [NotNull] SQLiteDbFactory factory,
+            [NotNull] SQLiteGenerator generator,
+            [NotNull] ILogger<SQLiteProcessor> logger,
+            [NotNull] IOptionsSnapshot<ProcessorOptions> options,
+            [NotNull] IConnectionStringAccessor connectionStringAccessor,
+            [NotNull] SQLiteBatchParserFactory batchParserFactory)
+            : base(() => factory.Factory, generator, logger, options.Value, connectionStringAccessor)
         {
-            get { return "SQLite"; }
+            _batchParserFactory = batchParserFactory;
         }
-
-        public override IList<string> DatabaseTypeAliases { get; } = new List<string>();
 
         [Obsolete]
         public SQLiteProcessor(
@@ -61,8 +75,10 @@ namespace FluentMigrator.Runner.Processors.SQLite
             IDbFactory factory)
             : base(connection, factory, generator, announcer, options)
         {
+            _batchParserFactory = new SQLiteBatchParserFactory(null);
         }
 
+        [Obsolete]
         public SQLiteProcessor(
             [NotNull] SQLiteDbFactory factory,
             [NotNull] SQLiteGenerator generator,
@@ -72,8 +88,16 @@ namespace FluentMigrator.Runner.Processors.SQLite
             [NotNull] IServiceProvider serviceProvider)
             : base(() => factory.Factory, generator, logger, options.Value, connectionStringAccessor)
         {
-            _serviceProvider = serviceProvider;
+            _batchParserFactory = serviceProvider.GetService<SQLiteBatchParserFactory>()
+             ?? new SQLiteBatchParserFactory(serviceProvider);
         }
+
+        public override string DatabaseType
+        {
+            get { return "SQLite"; }
+        }
+
+        public override IList<string> DatabaseTypeAliases { get; } = new List<string>();
 
         public override bool SchemaExists(string schemaName)
         {
@@ -216,7 +240,7 @@ namespace FluentMigrator.Runner.Processors.SQLite
         private bool ContainsGo(string sql)
         {
             var containsGo = false;
-            var parser = _serviceProvider?.GetService<SQLiteBatchParser>() ?? new SQLiteBatchParser();
+            var parser = _batchParserFactory.Create();
             parser.SpecialToken += (sender, args) => containsGo = true;
             using (var source = new TextReaderSource(new StringReader(sql), true))
             {
@@ -247,7 +271,7 @@ namespace FluentMigrator.Runner.Processors.SQLite
 
             try
             {
-                var parser = _serviceProvider?.GetService<SQLiteBatchParser>() ?? new SQLiteBatchParser();
+                var parser = _batchParserFactory.Create();
                 parser.SqlText += (sender, args) => { sqlBatch = args.SqlText.Trim(); };
                 parser.SpecialToken += (sender, args) =>
                 {

@@ -49,7 +49,6 @@ namespace FluentMigrator.Tests.Unit.Processors.SqlServer2016
             var serviceProvider = new ServiceCollection()
                 .AddLogging()
                 .AddSingleton<ILoggerProvider, TestLoggerProvider>()
-                .AddTransient<SqlServerBatchParser>()
                 .BuildServiceProvider();
 
             var logger = serviceProvider.GetRequiredService<ILogger<SqlServer2016Processor>>();
@@ -64,14 +63,29 @@ namespace FluentMigrator.Tests.Unit.Processors.SqlServer2016
                 new SqlServer2016Generator(),
                 opt,
                 MockedConnectionStringAccessor.Object,
-                serviceProvider);
+                new SqlServerBatchParserFactory(null));
         }
 
         private class Processor : SqlServer2016Processor
         {
             /// <inheritdoc />
-            public Processor([NotNull] DbProviderFactory factory, [NotNull] ILogger logger, [NotNull] SqlServer2008Quoter quoter, [NotNull] SqlServer2016Generator generator, [NotNull] IOptionsSnapshot<ProcessorOptions> options, [NotNull] IConnectionStringAccessor connectionStringAccessor, [NotNull] IServiceProvider serviceProvider)
-                : base(factory, logger, quoter, generator, options, connectionStringAccessor, serviceProvider)
+            public Processor(
+                [NotNull] DbProviderFactory factory,
+                [NotNull] ILogger logger,
+                [NotNull] SqlServer2008Quoter quoter,
+                [NotNull] SqlServer2016Generator generator,
+                [NotNull] IOptionsSnapshot<ProcessorOptions> options,
+                [NotNull] IConnectionStringAccessor connectionStringAccessor,
+                [NotNull] SqlServerBatchParserFactory batchParserFactory)
+                : base(
+                    new[] { "SqlServer2016", "SqlServer" },
+                    factory,
+                    logger,
+                    quoter,
+                    generator,
+                    options,
+                    connectionStringAccessor,
+                    batchParserFactory)
             {
             }
         }

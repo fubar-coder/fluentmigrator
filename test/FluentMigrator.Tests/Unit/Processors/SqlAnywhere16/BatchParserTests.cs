@@ -46,7 +46,6 @@ namespace FluentMigrator.Tests.Unit.Processors.SqlAnywhere16
 
             var serviceProvider = new ServiceCollection()
                 .AddLogging()
-                .AddTransient<SqlAnywhereBatchParser>()
                 .BuildServiceProvider();
 
             var logger = serviceProvider.GetRequiredService<ILogger<SqlAnywhere16Processor>>();
@@ -60,7 +59,7 @@ namespace FluentMigrator.Tests.Unit.Processors.SqlAnywhere16
                 logger,
                 opt,
                 MockedConnectionStringAccessor.Object,
-                serviceProvider);
+                new SqlAnywhereBatchParserFactory(null));
         }
     }
 }

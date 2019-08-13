@@ -16,27 +16,6 @@
 //
 #endregion
 
-using FluentMigrator.Runner.Helpers;
-
-#region License
-//
-// Copyright (c) 2007-2018, Sean Chambers <schambers80@gmail.com>
-// Copyright (c) 2010, Nathan Brown
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-//
-#endregion
-
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -49,6 +28,7 @@ using FluentMigrator.Runner.BatchParser;
 using FluentMigrator.Runner.BatchParser.Sources;
 using FluentMigrator.Runner.BatchParser.SpecialTokenSearchers;
 using FluentMigrator.Runner.Generators.SqlServer;
+using FluentMigrator.Runner.Helpers;
 using FluentMigrator.Runner.Initialization;
 
 using JetBrains.Annotations;
@@ -61,8 +41,26 @@ namespace FluentMigrator.Runner.Processors.SqlServer
 {
     public class SqlServer2000Processor : GenericProcessorBase
     {
-        [CanBeNull]
-        private readonly IServiceProvider _serviceProvider;
+        [NotNull]
+        private readonly ISqlBatchParserFactory _sqlBatchParserFactory;
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqlServer2000Processor"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        /// <param name="generator">The migration generator.</param>
+        /// <param name="options">The processor options.</param>
+        /// <param name="connectionStringAccessor">The connection string accessor.</param>
+        /// <param name="sqlBatchParserFactory">The factory for the SQL batch parser.</param>
+        public SqlServer2000Processor(
+            [NotNull] ILogger<SqlServer2000Processor> logger,
+            [NotNull] SqlServer2000Generator generator,
+            [NotNull] IOptionsSnapshot<ProcessorOptions> options,
+            [NotNull] IConnectionStringAccessor connectionStringAccessor,
+            [NotNull] ISqlBatchParserFactory sqlBatchParserFactory)
+            : this(SqlClientFactory.Instance, logger, generator, options, connectionStringAccessor, sqlBatchParserFactory)
+        {
+        }
 
         [Obsolete]
         public SqlServer2000Processor(IDbConnection connection, IMigrationGenerator generator, IAnnouncer announcer, IMigrationProcessorOptions options, IDbFactory factory)
@@ -70,6 +68,7 @@ namespace FluentMigrator.Runner.Processors.SqlServer
         {
         }
 
+        [Obsolete]
         public SqlServer2000Processor(
             [NotNull] ILogger<SqlServer2000Processor> logger,
             [NotNull] SqlServer2000Generator generator,
@@ -80,8 +79,30 @@ namespace FluentMigrator.Runner.Processors.SqlServer
         {
         }
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqlServer2000Processor"/> class.
+        /// </summary>
+        /// <param name="factory">The DB provider factory.</param>
+        /// <param name="logger">The logger.</param>
+        /// <param name="generator">The migration generator.</param>
+        /// <param name="options">The processor options.</param>
+        /// <param name="connectionStringAccessor">The connection string accessor.</param>
+        /// <param name="sqlBatchParserFactory">The factory for the SQL batch parser.</param>
         protected SqlServer2000Processor(
-            DbProviderFactory factory,
+            [NotNull] DbProviderFactory factory,
+            [NotNull] ILogger logger,
+            [NotNull] SqlServer2000Generator generator,
+            [NotNull] IOptionsSnapshot<ProcessorOptions> options,
+            [NotNull] IConnectionStringAccessor connectionStringAccessor,
+            [NotNull] ISqlBatchParserFactory sqlBatchParserFactory)
+            : base(() => factory, generator, logger, options.Value, connectionStringAccessor)
+        {
+            _sqlBatchParserFactory = sqlBatchParserFactory;
+        }
+
+        [Obsolete]
+        protected SqlServer2000Processor(
+            [NotNull] DbProviderFactory factory,
             [NotNull] ILogger logger,
             [NotNull] SqlServer2000Generator generator,
             [NotNull] IOptionsSnapshot<ProcessorOptions> options,
@@ -89,7 +110,8 @@ namespace FluentMigrator.Runner.Processors.SqlServer
             [NotNull] IServiceProvider serviceProvider)
             : base(() => factory, generator, logger, options.Value, connectionStringAccessor)
         {
-            _serviceProvider = serviceProvider;
+            _sqlBatchParserFactory = serviceProvider.GetService<SqlServerBatchParserFactory>()
+             ?? new SqlServerBatchParserFactory(serviceProvider);
         }
 
         public override string DatabaseType => "SqlServer2000";
@@ -221,7 +243,7 @@ namespace FluentMigrator.Runner.Processors.SqlServer
         private bool ContainsGo(string sql)
         {
             var containsGo = false;
-            var parser = _serviceProvider?.GetService<SqlServerBatchParser>() ?? new SqlServerBatchParser();
+            var parser = _sqlBatchParserFactory.Create();
             parser.SpecialToken += (sender, args) => containsGo = true;
             using (var source = new TextReaderSource(new StringReader(sql), true))
             {
@@ -260,7 +282,7 @@ namespace FluentMigrator.Runner.Processors.SqlServer
 
             try
             {
-                var parser = _serviceProvider?.GetService<SqlServerBatchParser>() ?? new SqlServerBatchParser();
+                var parser = _sqlBatchParserFactory.Create();
                 parser.SqlText += (sender, args) => sqlBatch = args.SqlText.Trim();
                 parser.SpecialToken += (sender, args) =>
                 {

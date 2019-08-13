@@ -41,8 +41,8 @@ namespace FluentMigrator.Runner.Processors.SqlServer
 {
     public class SqlServerProcessor : GenericProcessorBase
     {
-        [CanBeNull]
-        private readonly IServiceProvider _serviceProvider;
+        [NotNull]
+        private readonly ISqlBatchParserFactory _batchParserFactory;
 
         private const string SqlSchemaExists = "SELECT 1 WHERE EXISTS (SELECT * FROM sys.schemas WHERE NAME = '{0}') ";
         private const string TABLE_EXISTS = "SELECT 1 WHERE EXISTS (SELECT * FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = '{0}' AND TABLE_NAME = '{1}')";
@@ -72,8 +72,10 @@ namespace FluentMigrator.Runner.Processors.SqlServer
             DatabaseType = dbTypes.First();
             DatabaseTypeAliases = dbTypes.Skip(1).ToList();
             Quoter = generator?.Quoter;
+            _batchParserFactory = new SqlServerBatchParserFactory(null);
         }
 
+        [Obsolete]
         protected SqlServerProcessor(
             [NotNull, ItemNotNull] IEnumerable<string> databaseTypes,
             [NotNull] IMigrationGenerator generator,
@@ -86,6 +88,7 @@ namespace FluentMigrator.Runner.Processors.SqlServer
         {
         }
 
+        [Obsolete]
         protected SqlServerProcessor(
             [NotNull, ItemNotNull] IEnumerable<string> databaseTypes,
             [NotNull] DbProviderFactory factory,
@@ -97,7 +100,37 @@ namespace FluentMigrator.Runner.Processors.SqlServer
             [NotNull] IServiceProvider serviceProvider)
             : base(() => factory, generator, logger, options.Value, connectionStringAccessor)
         {
-            _serviceProvider = serviceProvider;
+            _batchParserFactory = serviceProvider.GetService<SqlServerBatchParserFactory>()
+             ?? new SqlServerBatchParserFactory(serviceProvider);
+            var dbTypes = databaseTypes.ToList();
+            DatabaseType = dbTypes.First();
+            DatabaseTypeAliases = dbTypes.Skip(1).ToList();
+            Quoter = quoter;
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqlServerProcessor"/> class.
+        /// </summary>
+        /// <param name="databaseTypes">The database types.</param>
+        /// <param name="factory">The DB provider factory.</param>
+        /// <param name="generator">The migration generator.</param>
+        /// <param name="quoter">The quoter.</param>
+        /// <param name="logger">The logger.</param>
+        /// <param name="options">The processor options.</param>
+        /// <param name="connectionStringAccessor">The connection string accessor.</param>
+        /// <param name="batchParserFactory">The batch parser factory.</param>
+        protected SqlServerProcessor(
+            [NotNull, ItemNotNull] IEnumerable<string> databaseTypes,
+            [NotNull] DbProviderFactory factory,
+            [NotNull] IMigrationGenerator generator,
+            [NotNull] IQuoter quoter,
+            [NotNull] ILogger logger,
+            [NotNull] IOptionsSnapshot<ProcessorOptions> options,
+            [NotNull] IConnectionStringAccessor connectionStringAccessor,
+            [NotNull] ISqlBatchParserFactory batchParserFactory)
+            : base(() => factory, generator, logger, options.Value, connectionStringAccessor)
+        {
+            _batchParserFactory = batchParserFactory;
             var dbTypes = databaseTypes.ToList();
             DatabaseType = dbTypes.First();
             DatabaseTypeAliases = dbTypes.Skip(1).ToList();
@@ -239,7 +272,7 @@ namespace FluentMigrator.Runner.Processors.SqlServer
         private bool ContainsGo(string sql)
         {
             var containsGo = false;
-            var parser = _serviceProvider?.GetService<SqlServerBatchParser>() ?? new SqlServerBatchParser();
+            var parser = _batchParserFactory.Create();
             parser.SpecialToken += (sender, args) => containsGo = true;
             using (var source = new TextReaderSource(new StringReader(sql), true))
             {
@@ -277,7 +310,7 @@ namespace FluentMigrator.Runner.Processors.SqlServer
 
             try
             {
-                var parser = _serviceProvider?.GetService<SqlServerBatchParser>() ?? new SqlServerBatchParser();
+                var parser = _batchParserFactory.Create();
                 parser.SqlText += (sender, args) => sqlBatch = args.SqlText.Trim();
                 parser.SpecialToken += (sender, args) =>
                 {

@@ -37,8 +37,8 @@ namespace FluentMigrator.Runner.Processors.SqlServer
 {
     public sealed class SqlServerCeProcessor : GenericProcessorBase
     {
-        [CanBeNull]
-        private readonly IServiceProvider _serviceProvider;
+        [NotNull]
+        private readonly ISqlBatchParserFactory _sqlBatchParserFactory;
 
         public override string DatabaseType => "SqlServerCe";
 
@@ -48,8 +48,22 @@ namespace FluentMigrator.Runner.Processors.SqlServer
         public SqlServerCeProcessor(IDbConnection connection, IMigrationGenerator generator, IAnnouncer announcer, IMigrationProcessorOptions options, IDbFactory factory)
             : base(connection, factory, generator, announcer, options)
         {
+            _sqlBatchParserFactory = new SqlServerBatchParserFactory(null);
         }
 
+        public SqlServerCeProcessor(
+            [NotNull] SqlServerCeDbFactory factory,
+            [NotNull] SqlServerCeGenerator generator,
+            [NotNull] ILogger<SqlServerCeProcessor> logger,
+            [NotNull] IOptionsSnapshot<ProcessorOptions> options,
+            [NotNull] IConnectionStringAccessor connectionStringAccessor,
+            [NotNull] SqlServerBatchParserFactory batchParserFactory)
+            : base(() => factory.Factory, generator, logger, options.Value, connectionStringAccessor)
+        {
+            _sqlBatchParserFactory = batchParserFactory;
+        }
+
+        [Obsolete]
         public SqlServerCeProcessor(
             [NotNull] SqlServerCeDbFactory factory,
             [NotNull] SqlServerCeGenerator generator,
@@ -59,7 +73,8 @@ namespace FluentMigrator.Runner.Processors.SqlServer
             [NotNull] IServiceProvider serviceProvider)
             : base(() => factory.Factory, generator, logger, options.Value, connectionStringAccessor)
         {
-            _serviceProvider = serviceProvider;
+            _sqlBatchParserFactory = serviceProvider.GetService<SqlServerBatchParserFactory>()
+             ?? new SqlServerBatchParserFactory(serviceProvider);
         }
 
         public override bool SchemaExists(string schemaName)
@@ -168,7 +183,7 @@ namespace FluentMigrator.Runner.Processors.SqlServer
         {
             var sqlStatements = new List<string>();
 
-            var parser = _serviceProvider?.GetService<SqlServerBatchParser>() ?? new SqlServerBatchParser();
+            var parser = _sqlBatchParserFactory.Create();
             parser.SqlText += (sender, args) =>
             {
                 var content = args.SqlText.Trim();

@@ -15,7 +15,9 @@
 #endregion
 
 using System;
+using System.Data.SqlClient;
 
+using FluentMigrator.Runner.BatchParser;
 using FluentMigrator.Runner.Generators.SqlServer;
 using FluentMigrator.Runner.Initialization;
 
@@ -28,7 +30,37 @@ namespace FluentMigrator.Runner.Processors.SqlServer
 {
     public class SqlServer2005Processor : SqlServerProcessor
     {
-        /// <inheritdoc />
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqlServer2005Processor"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        /// <param name="quoter">The quoter.</param>
+        /// <param name="generator">The migration generator.</param>
+        /// <param name="options">The processor options.</param>
+        /// <param name="connectionStringAccessor">The connection string accessor.</param>
+        /// <param name="batchParserFactory"></param>
+        public SqlServer2005Processor(
+            [NotNull] ILogger<SqlServer2005Processor> logger,
+            [NotNull] SqlServer2005Quoter quoter,
+            [NotNull] SqlServer2005Generator generator,
+            [NotNull] IOptionsSnapshot<ProcessorOptions> options,
+            [NotNull] IConnectionStringAccessor connectionStringAccessor,
+            [NotNull] SqlServerBatchParserFactory batchParserFactory)
+            : base(new[] { "SqlServer2005", "SqlServer" }, SqlClientFactory.Instance, generator, quoter, logger, options, connectionStringAccessor, batchParserFactory)
+        {
+
+        }
+
+        /// <summary>
+        /// Initializes a new instance of the <see cref="SqlServer2005Processor"/> class.
+        /// </summary>
+        /// <param name="logger">The logger.</param>
+        /// <param name="quoter">The quoter.</param>
+        /// <param name="generator">The migration generator.</param>
+        /// <param name="options">The processor options.</param>
+        /// <param name="connectionStringAccessor">The connection string accessor.</param>
+        /// <param name="serviceProvider">The service provider</param>
+        [Obsolete]
         public SqlServer2005Processor(
             [NotNull] ILogger<SqlServer2005Processor> logger,
             [NotNull] SqlServer2005Quoter quoter,
