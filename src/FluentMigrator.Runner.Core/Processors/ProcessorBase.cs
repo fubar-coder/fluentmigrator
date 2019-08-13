@@ -30,6 +30,9 @@ using Microsoft.Extensions.Logging;
 
 namespace FluentMigrator.Runner.Processors
 {
+    /// <summary>
+    /// Minimalist base class for a processor.
+    /// </summary>
     public abstract class ProcessorBase : IMigrationProcessor
     {
 #pragma warning disable 612
@@ -44,6 +47,12 @@ namespace FluentMigrator.Runner.Processors
         protected readonly IAnnouncer Announcer;
 #pragma warning restore 612
 
+        /// <summary>
+        /// Initializes a new instance of the <see cref="ProcessorBase"/> class.
+        /// </summary>
+        /// <param name="generator">The migration generator.</param>
+        /// <param name="announcer">The announcer.</param>
+        /// <param name="options">The options.</param>
         [Obsolete]
         protected ProcessorBase(
             IMigrationGenerator generator,
@@ -102,14 +111,29 @@ namespace FluentMigrator.Runner.Processors
         [Obsolete]
         public abstract string ConnectionString { get; }
 
+        /// <summary>
+        /// Gets the default database type identifier.
+        /// </summary>
         public abstract string DatabaseType { get; }
 
+        /// <summary>
+        /// Gets the database type aliases.
+        /// </summary>
         public abstract IList<string> DatabaseTypeAliases { get; }
 
+        /// <summary>
+        /// Gets or sets a value indicating whether a transaction was committed or rolled back.
+        /// </summary>
         public bool WasCommitted { get; protected set; }
 
+        /// <summary>
+        /// Gets the logger.
+        /// </summary>
         protected internal ILogger Logger { get; }
 
+        /// <summary>
+        /// Gets the processor options.
+        /// </summary>
         [NotNull]
         protected ProcessorOptions Options { get; }
 

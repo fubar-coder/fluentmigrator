@@ -29,6 +29,9 @@ using Microsoft.Extensions.Logging;
 
 namespace FluentMigrator.Runner.Processors
 {
+    /// <summary>
+    /// Generic base class for a processor.
+    /// </summary>
     public abstract class GenericProcessorBase : ProcessorBase
     {
         [Obsolete]
@@ -107,6 +110,9 @@ namespace FluentMigrator.Runner.Processors
         [Obsolete("Will change from public to protected")]
         public override string ConnectionString => _connectionString;
 
+        /// <summary>
+        /// Gets the current connection.
+        /// </summary>
         public IDbConnection Connection
         {
             get => _connection ?? _lazyConnection.Value;
@@ -117,12 +123,21 @@ namespace FluentMigrator.Runner.Processors
         [NotNull]
         public IDbFactory Factory { get; protected set; }
 
+        /// <summary>
+        /// Gets the current transaction.
+        /// </summary>
         [CanBeNull]
         public IDbTransaction Transaction { get; protected set; }
 
+        /// <summary>
+        /// Gets the DB provider factory.
+        /// </summary>
         [CanBeNull]
         protected DbProviderFactory DbProviderFactory => _dbProviderFactory.Value;
 
+        /// <summary>
+        /// Ensure that the connection is open.
+        /// </summary>
         protected virtual void EnsureConnectionIsOpen()
         {
             if (Connection != null && Connection.State != ConnectionState.Open)
@@ -131,6 +146,9 @@ namespace FluentMigrator.Runner.Processors
             }
         }
 
+        /// <summary>
+        /// Ensure that the connection is closed.
+        /// </summary>
         protected virtual void EnsureConnectionIsClosed()
         {
             if ((_connection != null || (_lazyConnection.IsValueCreated && Connection != null)) && Connection.State != ConnectionState.Closed)
@@ -139,6 +157,9 @@ namespace FluentMigrator.Runner.Processors
             }
         }
 
+        /// <summary>
+        /// Starts a new transaction.
+        /// </summary>
         public override void BeginTransaction()
         {
             if (Transaction != null) return;
@@ -150,6 +171,9 @@ namespace FluentMigrator.Runner.Processors
             Transaction = Connection?.BeginTransaction();
         }
 
+        /// <summary>
+        /// Rollback of the current transaction.
+        /// </summary>
         public override void RollbackTransaction()
         {
             if (Transaction == null) return;
@@ -161,6 +185,9 @@ namespace FluentMigrator.Runner.Processors
             Transaction = null;
         }
 
+        /// <summary>
+        /// Commit the current transaction.
+        /// </summary>
         public override void CommitTransaction()
         {
             if (Transaction == null) return;
@@ -172,10 +199,16 @@ namespace FluentMigrator.Runner.Processors
             Transaction = null;
         }
 
+        /// <summary>
+        /// Dispose the underlying resources.
+        /// </summary>
+        /// <param name="isDisposing"></param>
         protected override void Dispose(bool isDisposing)
         {
             if (!isDisposing || _disposed)
+            {
                 return;
+            }
 
             _disposed = true;
 
@@ -187,11 +220,23 @@ namespace FluentMigrator.Runner.Processors
             }
         }
 
+        /// <summary>
+        /// Create a command with the given command text.
+        /// </summary>
+        /// <param name="commandText">The command text.</param>
+        /// <returns>The new DB command.</returns>
         protected virtual IDbCommand CreateCommand(string commandText)
         {
             return CreateCommand(commandText, Connection, Transaction);
         }
 
+        /// <summary>
+        /// Create a new command with the given parameters.
+        /// </summary>
+        /// <param name="commandText">The command text.</param>
+        /// <param name="connection">The connection.</param>
+        /// <param name="transaction">The current transaction.</param>
+        /// <returns>The new DB command.</returns>
         protected virtual IDbCommand CreateCommand(string commandText, IDbConnection connection, IDbTransaction transaction)
         {
             IDbCommand result;
