@@ -12,13 +12,11 @@ jobs:
       with:
         dotnet-version: '2.2.105'
     - uses: warrenbuckley/Setup-Nuget@v1
+    - name: Install GitVersion
+      run: nuget install GitVersion.CommandLine -Version 4.0.0-beta0012 -Prerelease -ExcludeVersion
     - name: Determine package version
       id: package_version
-      run: |
-        nuget install GitVersion.CommandLine -Version 4.0.0-beta0012 -Prerelease -ExcludeVersion
-        GITVERSION_TOOL="GitVersion.CommandLine/tools/GitVersion.exe"
-        VERSION=$($GITVERSION_TOOL /showvariable SemVer)
-        echo "##[set-output name=VERSION;]$VERSION"
+      run: echo "##[set-output name=VERSION]$('GitVersion.CommandLine/tools/GitVersion.exe' /showvariable SemVer)"
     - name: Build and pack
       run: dotnet pack ./FluentMigrator.sln -c "Release" -o "$PWD/output" -p:SourceLinkCreate=true "-p:Version=${{ steps.package_version.outputs.VERSION }}"
     - uses: actions/upload-artifact@master
