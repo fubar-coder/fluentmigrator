@@ -51,6 +51,8 @@ jobs:
         nuget pack publish/FluentMigrator.Console.nuspec -OutputDirectory "$PWD/output" -Version "${{ steps.package_version.outputs.VERSION }}" -Properties "Configuration=Release;NoWarn=NU5100"
         nuget pack publish/FluentMigrator.Tools.nuspec -OutputDirectory "$PWD/output" -Version "${{ steps.package_version.outputs.VERSION }}" -Properties "Configuration=Release;NoWarn=NU5100"
       shell: bash
+      env:
+        DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
     - uses: actions/upload-artifact@master
       with:
         name: tool-packages
@@ -66,6 +68,8 @@ jobs:
         dotnet-version: '2.2.105'
     - name: Non-integration tests
       run: dotnet test ./test/FluentMigrator.Tests/FluentMigrator.Tests.csproj --filter 'TestCategory!=NotWorkingOnMono&TestCategory!=Integration'
+      env:
+        DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
 
   test-integration-sqlite:
     runs-on: ubuntu-latest
@@ -77,6 +81,8 @@ jobs:
         dotnet-version: '2.2.105'
     - name: SQLite integration tests
       run: dotnet test ./test/FluentMigrator.Tests/FluentMigrator.Tests.csproj --filter 'TestCategory!=NotWorkingOnMono&TestCategory=Integration&TestCategory=SQLite'
+      env:
+        DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
 
   deploy:
     runs-on: ubuntu-latest
