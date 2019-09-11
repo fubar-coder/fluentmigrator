@@ -1,0 +1,95 @@
+name: CI
+
+on: [push]
+
+jobs:
+  build-library:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '3.0.0-preview9-014004'
+    - name: Determine package version
+      id: package_version
+      run: |
+        nuget install GitVersion.CommandLine -Version 4.0.0-beta0012 -Prerelease -ExcludeVersion
+        export GITVERSION_TOOL="mono GitVersion.CommandLine/tools/GitVersion.exe"
+        export VERSION=$($GITVERSION_TOOL /showvariable SemVer)
+        echo ::set-output name=VERSION::$VERSION
+    - name: Build and pack
+      run: dotnet pack ./FluentMigrator.sln -c "Release" -o "$PWD/output" -p:SourceLinkCreate=true "-p:Version=${{ steps.package_version.outputs.VERSION }}"
+    - uses: actions/upload-artifact@master
+      with:
+        name: library-packages
+        path: output
+
+  build-tools:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '3.0.0-preview9-014004'
+    - name: Determine package version
+      id: package_version
+      run: |
+        nuget install GitVersion.CommandLine -Version 4.0.0-beta0012 -Prerelease -ExcludeVersion
+        export GITVERSION_TOOL="mono GitVersion.CommandLine/tools/GitVersion.exe"
+        export VERSION=$($GITVERSION_TOOL /showvariable SemVer)
+        echo ::set-output name=VERSION::$VERSION
+    - name: Build and pack
+      run: |
+        dotnet publish src/FluentMigrator.Console/FluentMigrator.Console.csproj -c Release -r win7-x86 -o "$PWD/publish/tools/net461/x86" -p:Platform=x86 -p:TargetFramework=net461 "-p:Version=${{ steps.package_version.outputs.VERSION }}"
+        dotnet publish src/FluentMigrator.Console/FluentMigrator.Console.csproj -c Release -r win7-x64 -o "$PWD/publish/tools/net461/x64" -p:Platform=x64 -p:TargetFramework=net461 "-p:Version=${{ steps.package_version.outputs.VERSION }}"
+        dotnet publish src/FluentMigrator.Console/FluentMigrator.Console.csproj -c Release -r any -o "$PWD/publish/tools/net461/any" -p:Platform=AnyCPU -p:TargetFramework=net461 "-p:Version=${{ steps.package_version.outputs.VERSION }}"
+        nuget pack publish/FluentMigrator.Console.nuspec -OutputDirectory "$PWD/output" -Version "${{ steps.package_version.outputs.VERSION }}" -Properties "Configuration=Release;NoWarn=NU5100"
+        nuget pack publish/FluentMigrator.Tools.nuspec -OutputDirectory "$PWD/output" -Version "${{ steps.package_version.outputs.VERSION }}" -Properties "Configuration=Release;NoWarn=NU5100"
+    - uses: actions/upload-artifact@master
+      with:
+        name: tool-packages
+        path: output
+
+  test-non-integration:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '3.0.0-preview9-014004'
+    - name: Non-integration tests
+      run: dotnet test ./test/FluentMigrator.Tests/FluentMigrator.Tests.csproj --filter 'TestCategory!=NotWorkingOnMono&TestCategory!=Integration'
+
+  test-integration-sqlite:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v1
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '3.0.0-preview9-014004'
+    - name: SQLite integration tests
+      run: dotnet test ./test/FluentMigrator.Tests/FluentMigrator.Tests.csproj --filter 'TestCategory!=NotWorkingOnMono&TestCategory=Integration&TestCategory=SQLite'
+
+  deploy:
+    runs-on: ubuntu-latest
+    needs: [ build-library, build-tools, test-non-integration, test-integration-sqlite ]
+    steps:
+    - uses: actions/download-artifact@master
+      with:
+        name: library-packages
+        path: output
+    - uses: actions/download-artifact@master
+      with:
+        name: tool-packages
+        path: output
+    - name: Publish to GitHub Packages
+      run: |
+        nuget source Add -Name "GitHub" -Source "https://nuget.pkg.github.com/fubar-coder/fluentmigrator/index.json -UserName fubar-coder -Password ${{ secrets.FLUENTMIGRATOR_GH_TOKEN }}
+        for pkg in output/* ; do
+          [ -e "$pkg" ] || continue
+          nuget push "$pkg" -Source "GitHub"
+        done
