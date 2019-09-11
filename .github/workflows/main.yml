@@ -16,8 +16,8 @@ jobs:
       id: package_version
       run: |
         nuget install GitVersion.CommandLine -Version 4.0.0-beta0012 -Prerelease -ExcludeVersion
-        export GITVERSION_TOOL="GitVersion.CommandLine/tools/GitVersion.exe"
-        export VERSION=$($GITVERSION_TOOL /showvariable SemVer)
+        GITVERSION_TOOL="GitVersion.CommandLine/tools/GitVersion.exe"
+        VERSION=$($GITVERSION_TOOL /showvariable SemVer)
         echo "##[set-output name=VERSION;]$VERSION"
     - name: Build and pack
       run: dotnet pack ./FluentMigrator.sln -c "Release" -o "$PWD/output" -p:SourceLinkCreate=true "-p:Version=${{ steps.package_version.outputs.VERSION }}"
