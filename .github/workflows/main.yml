@@ -4,20 +4,19 @@ on: [push]
 
 jobs:
   build-library:
-    runs-on: ubuntu-latest
+    runs-on: windows-latest
     steps:
     - uses: actions/checkout@v1
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v1
       with:
         dotnet-version: '2.2.105'
-    - name: Install nuget.exe
-      run: curl https://dist.nuget.org/win-x86-commandline/latest/nuget.exe > nuget.exe
+    - uses: warrenbuckley/Setup-Nuget@v1
     - name: Determine package version
       id: package_version
       run: |
-        mono nuget.exe install GitVersion.CommandLine -Version 4.0.0-beta0012 -Prerelease -ExcludeVersion
-        export GITVERSION_TOOL="mono GitVersion.CommandLine/tools/GitVersion.exe"
+        nuget install GitVersion.CommandLine -Version 4.0.0-beta0012 -Prerelease -ExcludeVersion
+        export GITVERSION_TOOL="GitVersion.CommandLine/tools/GitVersion.exe"
         export VERSION=$($GITVERSION_TOOL /showvariable SemVer)
         echo "##[set-output name=VERSION;]$VERSION"
     - name: Build and pack
